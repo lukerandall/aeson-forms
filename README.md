@@ -2,4 +2,4 @@
 
 ## Digestive functors for JSON
 
-Tutorial coming soon.
+See [examples/tutorial.lhs](https://github.com/lukerandall/aeson-forms/blob/master/examples/tutorial.lhs) for an introductory tutorial.
