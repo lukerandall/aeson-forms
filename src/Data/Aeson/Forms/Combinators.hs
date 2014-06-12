@@ -13,6 +13,9 @@ module Data.Aeson.Forms.Combinators
     -- * Validators
     , text
     , string
+    , bool
+    , object
+    , array
     , opt
     -- * Lower level helpers
     , success
@@ -51,26 +54,62 @@ runAction (Form action) = action
 
 ------------------------------------------------------------------------------
 -- | Extracts a field of type 'Text'. If field is not a string validation
--- fails with the message "Must be of type string". See also `string`.
+-- fails with the message "Must be a string". See also `string`.
 text :: Monad m
      => Field        -- ^ The name of the field to extract
      -> Form m Text
 text field = withForm go
   where
     go (Just (String t)) = success t
-    go _          = failed $ errors field ["Must be of type string"]
+    go _ = failed $ errors field ["Must be a string"]
 
 
 ------------------------------------------------------------------------------
 -- | Extracts a field of type 'String'. If field is not a string validation
--- fails with the message "Must be of type string". See also `text`.
+-- fails with the message "Must be a string". See also `text`.
 string :: Monad m
        => Field          -- ^ The name of the field to extract
        -> Form m String
 string field = withForm go
   where
     go (Just (String t)) = success $ show t
-    go _          = failed $ errors field ["Must be of type string"]
+    go _ = failed $ errors field ["Must be a string"]
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'Bool'. If field is not a boolean validation
+-- fails with the message "Must be a boolean".
+bool :: Monad m
+       => Field          -- ^ The name of the field to extract
+       -> Form m Bool
+bool field = withForm go
+  where
+    go (Just (Bool t)) = success t
+    go _ = failed $ errors field ["Must be a boolean"]
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'Object'. If field is not an object validation
+-- fails with the message "Must be an object".
+object :: Monad m
+       => Field          -- ^ The name of the field to extract
+       -> Form m Value
+object field = withForm go
+  where
+    go (Just obj@(Object _)) = success obj
+    go _ = failed $ errors field ["Must be an object"]
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'Object'. If field is not an object validation
+-- fails with the message "Must be an array".
+array :: Monad m
+       => Field          -- ^ The name of the field to extract
+       -> Form m Value
+array field = withForm go
+  where
+    go (Just ary@(Array _)) = success ary
+    go _ = failed $ errors field ["Must be an array"]
 
 
 ------------------------------------------------------------------------------
@@ -103,6 +142,7 @@ opt validate field = withForm go
     go Nothing     = missing
     missing = failed $ errors field ["Is required"]
 infixr 5 .:
+
 
 ------------------------------------------------------------------------------
 -- | Extracts a field and runs the given validator against it. The validator
