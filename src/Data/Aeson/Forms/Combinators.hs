@@ -1,102 +1,149 @@
-{-# LANGUAGE GADTs             #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Data.Aeson.Forms.Combinators
     (
-    -- * Forms
+    -- * Working with forms
       runForm
-    , Form (..)
+    , withForm
+    , runAction
     -- * Form fields
     , (.:)
+    , (.:!)
     , (.:?)
-    , (.:!?)
     -- * Validators
     , text
     , string
+    , opt
     -- * Lower level helpers
     , success
     , failed
     , errors
     ) where
 
-import           Control.Applicative
+import           Control.Applicative ((<$>))
 import           Control.Lens.Fold ((^?))
 import           Data.Aeson (Value (..))
 import           Data.Aeson.Lens (key)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Text (Text)
 ------------------------------------------------------------------------------
-import           Data.Aeson.Forms
+import           Data.Aeson.Forms.Internal.Types
 
-data Form m a where
-    Form :: Monad m => (Value -> m (Result a)) -> Form m a
 
-runForm :: Value -> Form m a -> m (Result a)
+------------------------------------------------------------------------------
+-- | Runs the form against the provided JSON 'Value'.
+runForm :: Maybe Value -> Form m a -> m (Result a)
 runForm json (Form f) = f json
 
-
-instance Functor (Form m) where
-    fmap f (Form form) = Form go
-      where
-        go json = do
-            g <- form json
-            return $ fmap f g
-
-instance Monad m => Applicative (Form m) where
-    pure x = Form $ \_ -> success x
-    Form f <*> Form g = Form go
-      where
-        go json = do
-            f' <- f json
-            g' <- g json
-            return $ f' <*> g'
+------------------------------------------------------------------------------
+-- | Takes a function that extracts a field from a JSON 'Value' and turns it
+-- into a 'Form'.
+withForm :: Monad m => (Maybe Value -> m (Result a)) -> Form m a
+withForm = Form
 
 
-text :: Monad m => Field -> Form m Text
-text field = Form go
+------------------------------------------------------------------------------
+-- | Runs the action from a form against the given JSON 'Value', yielding a
+-- result.
+runAction :: Form m a -> Maybe Value -> m (Result a)
+runAction (Form action) = action
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'Text'. If field is not a string validation
+-- fails with the message "Must be of type string". See also `string`.
+text :: Monad m
+     => Field        -- ^ The name of the field to extract
+     -> Form m Text
+text field = withForm go
   where
-    go (String t) = success t
+    go (Just (String t)) = success t
     go _          = failed $ errors field ["Must be of type string"]
 
-string :: Monad m => Field -> Form m String
-string field = Form go
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'String'. If field is not a string validation
+-- fails with the message "Must be of type string". See also `text`.
+string :: Monad m
+       => Field          -- ^ The name of the field to extract
+       -> Form m String
+string field = withForm go
   where
-    go (String t) = success $ show t
+    go (Just (String t)) = success $ show t
     go _          = failed $ errors field ["Must be of type string"]
 
-(.:) :: Monad m => Field -> (Field -> Form m a) -> Form m a
-(.:) field validate = go
+
+------------------------------------------------------------------------------
+-- | Converts a validator that returns 'a' into one that returns 'Maybe' a. If
+-- the value is not present 'Nothing' will be returned.
+opt :: Monad m
+    => (Field -> Form m a)  -- ^ The validator to run if field is present
+    -> Field                -- ^ The name of the field to extract
+    -> Form m (Maybe a)
+opt validate field = withForm go
   where
-    go :: Form m a
-    go json = case json ^? key field of
-        Just value -> validate field value
-        Nothing    -> Form $ failed missing
-    missing = errors field ["Is required"]
+    go json@(Just _) = do
+        result <- runAction (validate field) json
+        return $ Just <$> result
+    go (Nothing) = success Nothing
 
 
-(!!) :: Monad m => Value -> Field -> (Field -> Value -> m (Result a)) -> m (Result a)
-(!!) obj field validate =
-    case obj ^? key field of
-        Just value -> validate field value
-        Nothing    -> failed missing
+------------------------------------------------------------------------------
+-- | Extracts a required field and runs the given validator against it. If the
+-- field is absent validation fails with the message "Is required".
+(.:) :: Monad m
+     => Field                -- ^ The name of the field to extract
+     -> (Field -> Form m a)  -- ^ Validation function to run against the field
+     -> Form m a
+(.:) field validate = withForm go
   where
-    missing = errors field ["Is required"]
+    go (Just json) = case json ^? key field of
+        Just value -> runAction (validate field) $ Just value
+        Nothing    -> missing
+    go Nothing     = missing
+    missing = failed $ errors field ["Is required"]
 
-(.:?) :: Monad m => Value -> Field -> (Field -> Maybe Value -> m (Result (Maybe a))) -> m (Result (Maybe a))
-(.:?) obj field validate = validate field valueM
+
+------------------------------------------------------------------------------
+-- | Extracts a field and runs the given validator against it. The validator
+-- is responsible for handling the field being 'Nothing'.
+(.:!) :: Monad m
+      => Field                -- ^ The name of the field to extract
+      -> (Field -> Form m a)  -- ^ Validation function to run against the field
+      -> Form m a
+(.:!) field validate = withForm go
   where
-    valueM = obj ^? key field
+    go (Just json) = go' $ json ^? key field
+    go Nothing     = go' Nothing
+    go' = runAction (validate field)
 
-(.:!?) :: Monad m => Value -> Field -> (Field -> Maybe Value -> m (Result a)) -> m (Result a)
-(.:!?) obj field validate = validate field valueM
+------------------------------------------------------------------------------
+-- | Extracts a field and runs the given validator against it. If the field is
+-- absent it returns nothing.
+(.:?) :: Monad m
+      => Field                        -- ^ The name of the field to extract
+      -> (Field -> Form m (Maybe a))  -- ^ Validation function to run against the field
+      -> Form m (Maybe a)
+(.:?) field validate = withForm go
   where
-    valueM = obj ^? key field
+    go (Just json)
+      | Just value <- json ^? key field = runAction (validate field) (Just value)
+    go _     = success Nothing
 
+
+------------------------------------------------------------------------------
+-- | Return parsed value from a successful parse.
 success :: Monad m => a -> m (Result a)
 success = return . Success
 
-failed :: Monad m => Errors Text -> m (Result a)
-failed = return . Error
+------------------------------------------------------------------------------
+-- | Return validation errors for a failed parse.
+failed :: Monad m => Errors -> m (Result a)
+failed = return . Failed
 
-errors :: Field -> [a] -> Errors a
+------------------------------------------------------------------------------
+-- | Return 'Errors' for the given field and validation error messages.
+errors  :: Field   -- ^ Field that failed validation
+        -> [Text]  -- ^ List of validation error messages
+        -> Errors
 errors field errs = Errors $ HashMap.singleton field errs

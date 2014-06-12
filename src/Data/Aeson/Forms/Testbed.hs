@@ -2,6 +2,7 @@
 
 module Data.Aeson.Forms.Testbed
     ( User (..)
+    , Person (..)
     , success
     , A.decode
     , key
@@ -9,7 +10,6 @@ module Data.Aeson.Forms.Testbed
     , values
     , (.:)
     , (.:?)
-    , (.:!?)
     , errors
     , text
     , string
@@ -25,11 +25,10 @@ import           Data.Aeson.Forms.Combinators
 
 data User = User Text Text deriving (Show)
 
-js :: BS.ByteString
-js = BS.pack "{\"name\":\"Luke\",\"last_name\":\"Randall\"}"
+data Person = Person Text Text (Maybe Text) deriving (Show)
 
-values :: A.Value
-values = fromJust $ A.decode js
-  where
-    fromJust (Just x) = x
-    fromJust _        = error "fromJust: Nothing"
+js :: BS.ByteString
+js = BS.pack "{\"name\":\"Luke\",\"last_name\":\"Randall\",\"age\":29}"
+
+values :: Maybe A.Value
+values = A.decode js
