@@ -102,7 +102,7 @@ opt validate field = withForm go
         Nothing    -> missing
     go Nothing     = missing
     missing = failed $ errors field ["Is required"]
-
+infixr 5 .:
 
 ------------------------------------------------------------------------------
 -- | Extracts a field and runs the given validator against it. The validator
@@ -116,6 +116,8 @@ opt validate field = withForm go
     go (Just json) = go' $ json ^? key field
     go Nothing     = go' Nothing
     go' = runAction (validate field)
+infixr 5 .:!
+
 
 ------------------------------------------------------------------------------
 -- | Extracts a field and runs the given validator against it. If the field is
@@ -129,6 +131,7 @@ opt validate field = withForm go
     go (Just json)
       | Just value <- json ^? key field = runAction (validate field) (Just value)
     go _     = success Nothing
+infixr 5 .:?
 
 
 ------------------------------------------------------------------------------
