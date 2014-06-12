@@ -3,7 +3,8 @@
 module Data.Aeson.Forms.Combinators
     (
     -- * Working with forms
-      runForm
+      Form
+    , runForm
     , withForm
     , runAction
     -- * Form fields
