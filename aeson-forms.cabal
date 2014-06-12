@@ -2,14 +2,22 @@ name:                aeson-forms
 version:             0.1.0.0
 synopsis:            Digestive functors for JSON
 homepage:            https://github.com/lukerandall/aeson-forms
+bug-reports:         https://github.com/lukerandall/aeson-forms/issues
 license:             BSD3
 license-file:        LICENSE
 author:              Luke Randall
 maintainer:          luke.randall@gmail.com
 copyright:           2014 Luke Randall
-category:            Web
+category:            Text, Web, JSON
 build-type:          Simple
 cabal-version:       >=1.10
+
+extra-source-files:
+  LICENSE,
+  README.md
+  TODO.md
+  CHANGELOG.md
+
 
 library
   exposed-modules:
