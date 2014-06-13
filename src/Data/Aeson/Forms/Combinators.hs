@@ -62,9 +62,9 @@ runAction (Form action) = action
 
 
 ------------------------------------------------------------------------------
--- | Combines a Form m a and a function from a -> b into a Form m b.
-(>->) :: Monad m => Form m a -> (a -> b) -> Form m b
-(>->) = flip fmap
+-- | Combines a 'Field' validator and a function from a -> b to be
+(>->) :: Monad m => (Field -> Form m a) -> (a -> b) -> Field -> Form m b
+(>->) validator f field = fmap f (validator field)
 
 
 ------------------------------------------------------------------------------
