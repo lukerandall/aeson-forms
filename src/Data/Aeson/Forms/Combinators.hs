@@ -11,6 +11,7 @@ module Data.Aeson.Forms.Combinators
     , (.:)
     , (.:!)
     , (.:?)
+    , (>->)
     -- * Validators
     , text
     , string
@@ -58,6 +59,12 @@ withForm = Form
 -- result.
 runAction :: Form m a -> Maybe Value -> m (Result a)
 runAction (Form action) = action
+
+
+------------------------------------------------------------------------------
+-- | Combines a Form m a and a function from a -> b into a Form m b.
+(>->) :: Monad m => Form m a -> (a -> b) -> Form m b
+(>->) = flip (<$>)
 
 
 ------------------------------------------------------------------------------
