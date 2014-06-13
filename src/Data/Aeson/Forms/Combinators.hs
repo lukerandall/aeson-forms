@@ -212,6 +212,7 @@ opt :: Monad m
     -> Form m (Maybe a)
 opt validate field = withForm go
   where
+    go (Just Null) = success Nothing
     go json@(Just _) = do
         result <- runAction (validate field) json
         return $ Just <$> result
