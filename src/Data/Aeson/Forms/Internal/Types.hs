@@ -10,7 +10,7 @@ module Data.Aeson.Forms.Internal.Types
     ) where
 
 import           Control.Applicative
-import           Data.Aeson (Value (..))
+import           Data.Aeson (Value (..), ToJSON (..))
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Monoid
@@ -93,11 +93,18 @@ instance Monad Result where
 -- | Validation errors, keyed by 'Field' name.
 newtype Errors = Errors (HashMap Field [Text]) deriving (Show, Eq)
 
-instance Monoid (Errors) where
+
+------------------------------------------------------------------------------
+instance Monoid Errors where
     mempty = Errors HashMap.empty
     Errors a `mappend` Errors b = Errors (a `combine` b)
       where
         combine = HashMap.unionWith (++)
+
+
+------------------------------------------------------------------------------
+instance ToJSON Errors where
+    toJSON (Errors hsh) = toJSON hsh
 
 
 ------------------------------------------------------------------------------
