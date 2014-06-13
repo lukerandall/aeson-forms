@@ -45,7 +45,7 @@ import           Data.Aeson.Forms.Internal.Types
 ------------------------------------------------------------------------------
 -- | Runs the form against the provided JSON 'Value'.
 runForm :: Maybe Value -> Form m a -> m (Result a)
-runForm json (Form f) = f json
+runForm json (Form action) = action json
 
 ------------------------------------------------------------------------------
 -- | Takes a function that extracts a field from a JSON 'Value' and turns it
