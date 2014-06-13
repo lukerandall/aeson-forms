@@ -14,6 +14,12 @@ module Data.Aeson.Forms.Combinators
     -- * Validators
     , text
     , string
+    , int
+    , integer
+    , integral
+    , float
+    , double
+    , realFloat
     , bool
     , object
     , array
@@ -29,6 +35,7 @@ import           Control.Lens.Fold ((^?))
 import           Data.Aeson (Value (..))
 import           Data.Aeson.Lens (key)
 import qualified Data.HashMap.Strict as HashMap
+import           Data.Scientific (floatingOrInteger)
 import           Data.Text (Text)
 ------------------------------------------------------------------------------
 import           Data.Aeson.Forms.Internal.Types
@@ -75,6 +82,82 @@ string field = withForm go
   where
     go (Just (String t)) = success $ show t
     go _ = failed $ errors field ["Must be a string"]
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'Int'. If field is not an integer validation
+-- fails with the message "Must be an integer". See also `integer` and
+-- `integral`.
+int :: Monad m
+    => Field       -- ^ The name of the field to extract
+    -> Form m Int
+int = integral
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'Integer'. If field is not an integer validation
+-- fails with the message "Must be an integer". See also `int` and
+-- `integral`.
+integer :: Monad m
+        => Field           -- ^ The name of the field to extract
+        -> Form m Integer
+integer = integral
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'Integral i => i'. If field is not an integer
+-- validation fails with the message "Must be an integer". See also `int`
+-- and `integer`.
+integral :: (Monad m, Integral i)
+        => Field     -- ^ The name of the field to extract
+        -> Form m i
+integral field = withForm go
+  where
+    go (Just (Number scientific)) = convert scientific
+    go _ = wrongType
+    convert scientific =
+        case (floatingOrInteger scientific :: Integral i => Either Double i) of
+            Left _    -> wrongType
+            Right num -> success num
+    wrongType = failed $ errors field ["Must be an integer"]
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'Double'. If field is not a number validation
+-- fails with the message "Must be an number". See also `float` and
+-- `realFloat`.
+double :: Monad m
+       => Field          -- ^ The name of the field to extract
+       -> Form m Double
+double = realFloat
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'Double'. If field is not a number validation
+-- fails with the message "Must be an number". See also `double` and
+-- `realFloat`.
+float :: Monad m
+      => Field          -- ^ The name of the field to extract
+      -> Form m Float
+float = realFloat
+
+
+------------------------------------------------------------------------------
+-- | Extracts a field of type 'RealFloat r => r'. If field is not a number
+-- validation fails with the message "Must be a number ". See also `float`
+-- and `double`.
+realFloat :: (Monad m, RealFloat r)
+          => Field     -- ^ The name of the field to extract
+          -> Form m r
+realFloat field = withForm go
+  where
+    go (Just (Number scientific)) = convert scientific
+    go _ = wrongType
+    convert scientific =
+        case (floatingOrInteger scientific :: RealFloat r => Either r Integer) of
+            Left num -> success num
+            Right num  -> success $ fromIntegral num
+    wrongType = failed $ errors field ["Must be a number"]
 
 
 ------------------------------------------------------------------------------
