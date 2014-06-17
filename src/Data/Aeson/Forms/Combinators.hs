@@ -4,6 +4,7 @@ module Data.Aeson.Forms.Combinators
     (
     -- * Working with forms
       Form
+    , Result (..)
     , runForm
     , withForm
     , runAction
