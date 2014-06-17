@@ -1,4 +1,5 @@
-{-# LANGUAGE GADTs #-}
+{-# LANGUAGE GADTs             #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Data.Aeson.Forms.Internal.Types
     (
@@ -10,7 +11,7 @@ module Data.Aeson.Forms.Internal.Types
     ) where
 
 import           Control.Applicative
-import           Data.Aeson (Value (..), ToJSON (..))
+import           Data.Aeson (Value (..), ToJSON (..), object, (.=))
 import           Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as HashMap
 import           Data.Monoid
@@ -104,7 +105,7 @@ instance Monoid Errors where
 
 ------------------------------------------------------------------------------
 instance ToJSON Errors where
-    toJSON (Errors hsh) = toJSON hsh
+    toJSON (Errors errors) = object ["errors" .= toJSON errors]
 
 
 ------------------------------------------------------------------------------
