@@ -66,6 +66,7 @@ runAction (Form action) = action
 -- | Combines a 'Field' validator and a function from a -> b to be
 (>->) :: Monad m => (Field -> Form m a) -> (a -> b) -> Field -> Form m b
 (>->) validator f field = fmap f (validator field)
+{-# INLINE (>->) #-}
 
 
 ------------------------------------------------------------------------------
@@ -78,6 +79,7 @@ text field = withForm go
   where
     go (Just (String t)) = success t
     go _ = failed $ errors field ["Must be a string"]
+{-# INLINE text #-}
 
 
 ------------------------------------------------------------------------------
@@ -90,6 +92,7 @@ string field = withForm go
   where
     go (Just (String t)) = success $ show t
     go _ = failed $ errors field ["Must be a string"]
+{-# INLINE string #-}
 
 
 ------------------------------------------------------------------------------
@@ -100,6 +103,7 @@ int :: Monad m
     => Field       -- ^ The name of the field to extract
     -> Form m Int
 int = integral
+{-# INLINE int #-}
 
 
 ------------------------------------------------------------------------------
@@ -110,6 +114,7 @@ integer :: Monad m
         => Field           -- ^ The name of the field to extract
         -> Form m Integer
 integer = integral
+{-# INLINE integer #-}
 
 
 ------------------------------------------------------------------------------
@@ -128,6 +133,7 @@ integral field = withForm go
             Left _    -> wrongType
             Right num -> success num
     wrongType = failed $ errors field ["Must be an integer"]
+{-# INLINE integral #-}
 
 
 ------------------------------------------------------------------------------
@@ -138,6 +144,7 @@ double :: Monad m
        => Field          -- ^ The name of the field to extract
        -> Form m Double
 double = realFloat
+{-# INLINE double #-}
 
 
 ------------------------------------------------------------------------------
@@ -148,6 +155,7 @@ float :: Monad m
       => Field          -- ^ The name of the field to extract
       -> Form m Float
 float = realFloat
+{-# INLINE float #-}
 
 
 ------------------------------------------------------------------------------
@@ -166,6 +174,7 @@ realFloat field = withForm go
             Left num -> success num
             Right num  -> success $ fromIntegral num
     wrongType = failed $ errors field ["Must be a number"]
+{-# INLINE realFloat #-}
 
 
 ------------------------------------------------------------------------------
@@ -178,6 +187,7 @@ bool field = withForm go
   where
     go (Just (Bool t)) = success t
     go _ = failed $ errors field ["Must be a boolean"]
+{-# INLINE bool #-}
 
 
 ------------------------------------------------------------------------------
@@ -190,6 +200,7 @@ object field = withForm go
   where
     go (Just obj@(Object _)) = success obj
     go _ = failed $ errors field ["Must be an object"]
+{-# INLINE object #-}
 
 
 ------------------------------------------------------------------------------
@@ -202,6 +213,7 @@ array field = withForm go
   where
     go (Just ary@(Array _)) = success ary
     go _ = failed $ errors field ["Must be an array"]
+{-# INLINE array #-}
 
 
 ------------------------------------------------------------------------------
@@ -218,6 +230,7 @@ opt validate field = withForm go
         result <- runAction (validate field) json
         return $ Just <$> result
     go (Nothing) = success Nothing
+{-# INLINE opt #-}
 
 
 ------------------------------------------------------------------------------
@@ -235,6 +248,7 @@ opt validate field = withForm go
     go Nothing     = missing
     missing = failed $ errors field ["Is required"]
 infixr 5 .:
+{-# INLINE (.:) #-}
 
 
 ------------------------------------------------------------------------------
@@ -250,6 +264,7 @@ infixr 5 .:
     go Nothing     = go' Nothing
     go' = runAction (validate field)
 infixr 5 .:!
+{-# INLINE (.:!) #-}
 
 
 ------------------------------------------------------------------------------
@@ -265,17 +280,22 @@ infixr 5 .:!
       | Just value <- json ^? key field = runAction (validate field) (Just value)
     go _     = success Nothing
 infixr 5 .:?
+{-# INLINE (.:?) #-}
 
 
 ------------------------------------------------------------------------------
 -- | Return parsed value from a successful parse.
 success :: Monad m => a -> m (Result a)
 success = return . Success
+{-# INLINE success #-}
+
 
 ------------------------------------------------------------------------------
 -- | Return validation errors for a failed parse.
 failed :: Monad m => Errors -> m (Result a)
 failed = return . Failed
+{-# INLINE failed #-}
+
 
 ------------------------------------------------------------------------------
 -- | Return 'Errors' for the given field and validation error messages.
@@ -283,3 +303,4 @@ errors  :: Field   -- ^ Field that failed validation
         -> [Text]  -- ^ List of validation error messages
         -> Errors
 errors field errs = Errors $ HashMap.singleton field errs
+{-# INLINE errors #-}
